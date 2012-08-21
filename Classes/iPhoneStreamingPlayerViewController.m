@@ -136,6 +136,32 @@
 	[self setButtonImage:[UIImage imageNamed:@"playbutton.png"]];
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+	
+	UIApplication *application = [UIApplication sharedApplication];
+	if ([application respondsToSelector:@selector(beginReceivingRemoteControlEvents)]) //background support related code
+	{
+		[application beginReceivingRemoteControlEvents];
+		[self becomeFirstResponder]; // this enables listening for events
+	}
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+	
+	UIApplication *application = [UIApplication sharedApplication];
+	if ([application respondsToSelector:@selector(endReceivingRemoteControlEvents)]) //background support related code
+	{
+		[application endReceivingRemoteControlEvents];
+		[self resignFirstResponder]; // this enables listening for events
+	}
+}
+
+- (BOOL)canBecomeFirstResponder {
+	return YES;
+}
+
 //
 // spinButton
 //
@@ -314,6 +340,29 @@
 	{
 		[progressUpdateTimer invalidate];
 		progressUpdateTimer = nil;
+	}
+}
+
+#pragma mark Remote Control Events
+/* The iPod controls will send these events when the app is in the background */
+- (void)remoteControlReceivedWithEvent:(UIEvent *)event { //background support related code
+	 if (event.type == UIEventTypeRemoteControl) {
+		switch (event.subtype) {
+			case UIEventSubtypeRemoteControlTogglePlayPause:
+				[streamer pause];
+				break;
+			case UIEventSubtypeRemoteControlPlay:
+				[streamer start];
+				break;
+			case UIEventSubtypeRemoteControlPause:
+				[streamer pause];
+				break;
+			case UIEventSubtypeRemoteControlStop:
+				[streamer stop];
+				break;
+			default:
+				break;
+		}
 	}
 }
 

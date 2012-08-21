@@ -21,16 +21,8 @@
 //     distribution.
 //
 
-#if TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
-#else
-#import <Cocoa/Cocoa.h>
-#endif
 
 int main(int argc, const char *argv[]) {
-#if TARGET_OS_IPHONE
     return UIApplicationMain(argc, (char **)argv, nil, nil);
-#else
-    return NSApplicationMain(argc, argv);
-#endif
 }

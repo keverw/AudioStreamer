@@ -26,6 +26,8 @@
 
 #import "AudioStreamer.h"
 
+#import "UIDevice+Hardware.h"
+
 #define BitRateEstimationMaxPackets 5000
 #define BitRateEstimationMinPackets 50
 
@@ -260,6 +262,11 @@ void ASReadStreamCallBack(CFReadStreamRef aStream, CFStreamEventType eventType,
   if (state_ != AS_PLAYING) return NO;
   assert(audioQueue != NULL);
   err = AudioQueuePause(audioQueue);
+	if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) { //background support related code
+		if (bgTaskId != UIBackgroundTaskInvalid) {
+			bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:NULL];
+		}
+	}
   if (err) {
     [self failWithErrorCode:AS_AUDIO_QUEUE_PAUSE_FAILED];
     return NO;
@@ -272,6 +279,11 @@ void ASReadStreamCallBack(CFReadStreamRef aStream, CFStreamEventType eventType,
   if (state_ != AS_PAUSED) return NO;
   assert(audioQueue != NULL);
   err = AudioQueueStart(audioQueue, NULL);
+
+	if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) { //background support related code
+		bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:NULL];
+	}
+	
   if (err) {
     [self failWithErrorCode:AS_AUDIO_QUEUE_START_FAILED];
     return NO;
@@ -796,6 +808,11 @@ void ASReadStreamCallBack(CFReadStreamRef aStream, CFStreamEventType eventType,
   assert(packetsFilled > 0);
   err = AudioQueueEnqueueBuffer(audioQueue, fillBuf, packetsFilled,
                                 packetDescs);
+	
+	if (bgTaskId != UIBackgroundTaskInvalid) {
+		bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:NULL];
+	}
+	
   if (err) {
     [self failWithErrorCode:AS_AUDIO_QUEUE_ENQUEUE_FAILED];
     return -1;
@@ -807,6 +824,12 @@ void ASReadStreamCallBack(CFReadStreamRef aStream, CFStreamEventType eventType,
      * start the audio queue and the file stream should remain ahead of it */
     if (bufferCnt < 3 || buffersUsed > 2) {
       err = AudioQueueStart(audioQueue, NULL);
+		
+		if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) {  //background support related code
+			bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:NULL];
+		}
+
+		
       if (err) {
         [self failWithErrorCode:AS_AUDIO_QUEUE_START_FAILED];
         return -1;
@@ -826,6 +849,11 @@ void ASReadStreamCallBack(CFReadStreamRef aStream, CFStreamEventType eventType,
   if (queued_head == NULL &&
       CFReadStreamGetStatus(stream) == kCFStreamStatusAtEnd) {
     err = AudioQueueFlush(audioQueue);
+	  
+	  if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) {
+		  bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:NULL];
+	  }
+	  
     if (err) {
       [self failWithErrorCode:AS_AUDIO_QUEUE_FLUSH_FAILED];
       return -1;
